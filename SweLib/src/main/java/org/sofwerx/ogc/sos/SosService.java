@@ -17,6 +17,7 @@ import javax.xml.transform.TransformerException;
  * data over IPC, HTTP, or both
  */
 public class SosService implements SosMessageListener {
+    private final static String DEFAULT_SWE_CHANNEL = "sost";
     private HandlerThread sosThread; //the MANET itself runs on this thread where possible
     private Handler handler;
     private SosMessageListener listener;
@@ -55,7 +56,7 @@ public class SosService implements SosMessageListener {
         sosThread.start();
         this.ipcBroadcast = enableIpcBroadcast;
         this.sosHttpBroadcast = (sosServerURL != null);
-        SosIpcTransceiver.setChannel("torgi");
+        SosIpcTransceiver.setChannel(DEFAULT_SWE_CHANNEL);
     }
 
     /**

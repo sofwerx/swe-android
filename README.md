@@ -65,13 +65,17 @@ To use this library, you should have some type of sensor in an app that needs to
 
 You can build a sensor by providing a human-readable name that uniquely identifies this one particular sensor, a unique ID for this sensor, a title for this type of sensor, and a human-readable description of the sensor.
 ```java
-SosSensor sosSensor = new SosSensor("Sensor 18742","sensor18742","TORGI","Tactical Observation of RF and GNSS Interference sensor");
+SosSensor sosSensor = new SosSensor("Sensor 18742","sensor18742","TORGI",
+        "Tactical Observation of RF and GNSS Interference sensor");
 ```
 <br/>
 Next you want to add SensorMeasurements to your sensor, SensorMeasurements describe what the sensor measures. For our example, our sensor measures the amount of "foo" at a particular time and location like this
 
 ```java
-sosMeasurementFoo = new SensorMeasurement(new SensorResultTemplateField("foo","www.your_link_that_describes_the_foo_standard.com","foo per inches")); //the url provided in the second field helps others understand about this idea of "foo" if you dont have a link, you can provide some placeholder or a way to contact you
+sosMeasurementFoo = new SensorMeasurement(new SensorResultTemplateField("foo",
+        "www.your_link_that_describes_the_foo_standard.com","foo per inches"));
+//the url provided in the second field helps others understand about this idea of "foo"
+//if you dont have a link, you can provide some placeholder or a way to contact you
 sosMeasurementTime = new SensorMeasurementTime();
 sosMeasurementLocation = new SensorMeasurementLocation();
 sosSensor.addMeasurement(sosMeasurementFoo);

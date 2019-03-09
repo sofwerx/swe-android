@@ -63,9 +63,9 @@ To use this library, you should have some type of sensor in an app that needs to
 
 ### Step 1: build your sensor
 
-You can build a sensor by providing a human-readable name that uniquely identifies this one particular sensor, a unique ID for this sensor, a title for this type of sensor, and a human-readable description of the sensor.
+You can build a sensor by providing a human-readable name that uniquely identifies this one particular sensor, a unique ID for this sensor, a title for this type of sensor, and a human-readable description of the sensor. *Yes*, the first two fields seem a bit redundant. Think of the first one as how you want this particular sensor identified to a person and the second as a shorter, more-compressed and without whitespace version of how this particular sensor should be identified to a machine.
 ```java
-SosSensor sosSensor = new SosSensor("Sensor 18742","sensor18742","TORGI",
+SosSensor sosSensor = new SosSensor("Device 18742 (Hill Top)","device18742","TORGI",
         "Tactical Observation of RF and GNSS Interference sensor");
 ```
 <br/>

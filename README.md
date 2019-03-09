@@ -68,7 +68,8 @@ You can build a sensor by providing a human-readable name that uniquely identifi
 SosSensor sosSensor = new SosSensor("Sensor 18742","sensor18742","TORGI","Tactical Observation of RF and GNSS Interference sensor");
 ```
 <br/>
-Next you want to add SensorMeasurements to your sensor, SensorMeasurements describe what the sensor measures. For our example, our sensor measures the amount of "foo" at a particular time and location like this:
+Next you want to add SensorMeasurements to your sensor, SensorMeasurements describe what the sensor measures. For our example, our sensor measures the amount of "foo" at a particular time and location like this
+
 ```java
 sosMeasurementFoo = new SensorMeasurement(new SensorResultTemplateField("foo","www.your_link_that_describes_the_foo_standard.com","foo per inches")); //the url provided in the second field helps others understand about this idea of "foo" if you dont have a link, you can provide some placeholder or a way to contact you
 sosMeasurementTime = new SensorMeasurementTime();
@@ -77,6 +78,7 @@ sosSensor.addMeasurement(sosMeasurementFoo);
 sosSensor.addMeasurement(sosMeasurementTime);
 sosSensor.addMeasurement(sosMeasurementLocation);
 ```
+
 <br/>
 
 ### Step 2: describe the SOS-T server
@@ -85,9 +87,9 @@ Now you need to tell the library about where the sensor should send its data
 ```java
 SosService sosService = new SosService(context, sosSensor,"www.your-sos-t-server.com", true, true);
 ```
-<br/>
+
 Those last two boolean values deserve a bit more attention. The first, *turnOn* means that if set to true, the library will immediately try to contact the **SOS-T server** and handle all the initial information about what the **Sensor** intends to provide.<br/>
-The second boolean, *enableIpcBroadcast* means that the library will send out your sensor data to other apps on your same device. This is included primarily to support a future link with [**OpenSensorHub-Android**](https://github.com/opensensorhub/osh-android). If you want to send your sensor data to other apps on the same device, but not out over the internet to an SOS-T server, just provide *null* for the sosServerURL.
+The second boolean, *enableIpcBroadcast* means that the library will send out your sensor data to other apps on your same device. This is included primarily to support a future link with [**OpenSensorHub**](https://github.com/opensensorhub/osh-android). If you want to send your sensor data to other apps on the same device, but not out over the internet to an SOS-T server, just provide *null* for the sosServerURL.
 <br/>
 
 ### Step 3: send your data

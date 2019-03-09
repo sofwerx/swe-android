@@ -69,15 +69,17 @@ SosSensor sosSensor = new SosSensor("Device 18742 (Hill Top)","device18742","TOR
         "Tactical Observation of RF and GNSS Interference sensor");
 ```
 <br/>
-Next you want to add SensorMeasurements to your sensor, SensorMeasurements describe what the sensor measures. For our example, our sensor measures the amount of "foo" at a particular time and location like this
+Next you want to add SensorMeasurements to your sensor, SensorMeasurements describe what the sensor measures. For our example, our sensor measures the amount of *foo* at a particular time and location like this
 
 ```java
-sosMeasurementFoo = new SensorMeasurement(new SensorResultTemplateField("foo",
-        "www.your_link_that_describes_the_foo_standard.com","foo per inches"));
+SensorMeasurement sosMeasurementFoo = new SensorMeasurement(
+        new SensorResultTemplateField("foo",
+                "www.your_link_that_describes_the_foo_standard.com",
+                "foo per inches"));
 //the url provided in the second field helps others understand about this idea of "foo"
 //if you dont have a link, you can provide some placeholder or a way to contact you
-sosMeasurementTime = new SensorMeasurementTime();
-sosMeasurementLocation = new SensorMeasurementLocation();
+SensorMeasurementTime sosMeasurementTime = new SensorMeasurementTime();
+SensorMeasurementLocation sosMeasurementLocation = new SensorMeasurementLocation();
 sosSensor.addMeasurement(sosMeasurementFoo);
 sosSensor.addMeasurement(sosMeasurementTime);
 sosSensor.addMeasurement(sosMeasurementLocation);

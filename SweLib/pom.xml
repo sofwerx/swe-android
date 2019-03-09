@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	<version>1.4.2-SNAPSHOT</version>
+    <groupId>org.sofwerx.ogc.sos</groupId>
+    <artifactId>SweLib</artifactId>
+    <name>SweLib</name>
+	<description>A helper to allow simple sensors to register and communicate via OGC SOS-T standard and also facilitate IPC comms with other SOS-T aware apps under development for SOFWERX</description>
+	<url>https://github.com/sofwerx/swe-android</url>
+    <packaging>apklib</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+    	<sourceDirectory>src</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>com.jayway.maven.plugins.android.generation2</groupId>
+                <artifactId>android-maven-plugin</artifactId>
+                <version>3.9.0-rc.2</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <!--<sdk>-->
+                        <!--<path>${env.ANDROID_HOME}</path>-->
+                        <!--<platform>16</platform>-->
+                    <!--</sdk>-->
+                    <undeployBeforeDeploy>true</undeployBeforeDeploy>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.android</groupId>
+            <artifactId>android</artifactId>
+            <scope>provided</scope>
+            <version>4.1.1.4</version>
+        </dependency>
+    </dependencies>
+
+
+    <issueManagement>
+        <url>https://github.com/sofwerx/swe-android/issues</url>
+        <system>GitHub Issues</system>
+    </issueManagement>
+
+    <licenses>
+        <license>
+            <name>Apache License Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/sofwerx/swe-android</url>
+        <connection>scm:git:git://github.com/sofwerx/swe-android.git</connection>
+        <developerConnection>scm:git:git@github.com:sofwerx/swe-android.git</developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Scott Landis</name>
+            <email>scottalandis118@gmail.com</email>
+            <url>https://github.com/scottlandis</url>
+            <id>scottlandis</id>
+        </developer>
+    </developers>
+</project>

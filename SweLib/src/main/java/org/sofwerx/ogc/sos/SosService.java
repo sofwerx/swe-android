@@ -17,7 +17,7 @@ import javax.xml.transform.TransformerException;
  * data over IPC, HTTP, or both
  */
 public class SosService implements SosMessageListener {
-    private final static String DEFAULT_SWE_CHANNEL = "sost";
+    public final static String DEFAULT_SWE_CHANNEL = "sost";
     private HandlerThread sosThread; //the MANET itself runs on this thread where possible
     private Handler handler;
     private SosMessageListener listener;

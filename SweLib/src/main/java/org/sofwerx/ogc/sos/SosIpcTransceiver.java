@@ -45,7 +45,7 @@ public class SosIpcTransceiver extends BroadcastReceiver {
     private final static String SQAN_PACKET_BYTES = "bytes";
     private final static String SQAN_PACKET_CHANNEL = "channel";
     private static boolean enableSqAN = true;
-    private static String channel = null;
+    private static String channel = SosService.DEFAULT_SWE_CHANNEL;
     private SosMessageListener listener;
 
     public SosIpcTransceiver(SosMessageListener listener) {
@@ -67,12 +67,12 @@ public class SosIpcTransceiver extends BroadcastReceiver {
                 String origin = intent.getStringExtra(EXTRA_ORIGIN);
                 if (!BuildConfig.APPLICATION_ID.equalsIgnoreCase(origin)) {
                     String channel = intent.getStringExtra(SQAN_PACKET_CHANNEL);
-                    if ((SosIpcTransceiver.channel != null) && SosIpcTransceiver.channel.equalsIgnoreCase(channel)) { //only handle TORGI channel broadcasts
+                    if ((SosIpcTransceiver.channel != null) && SosIpcTransceiver.channel.equalsIgnoreCase(channel)) { //only handle SOS-T channel broadcasts
                         try {
                             byte[] bytes = intent.getByteArrayExtra(SQAN_PACKET_BYTES);
                             if (bytes != null) {
                                 String payload = new String(bytes,"UTF-8");
-                                onMessageReceived(context,"sqan.torgi",payload);
+                                onMessageReceived(context,"sqan."+SQAN_PACKET_CHANNEL,payload);
                             }
                         } catch (UnsupportedEncodingException ignore) {
                         }

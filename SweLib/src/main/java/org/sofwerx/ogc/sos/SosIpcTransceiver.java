@@ -61,11 +61,11 @@ public class SosIpcTransceiver extends BroadcastReceiver {
             String action = intent.getAction();
             if (ACTION_SOS.equalsIgnoreCase(action)) {
                 String origin = intent.getStringExtra(EXTRA_ORIGIN);
-                if (!BuildConfig.APPLICATION_ID.equalsIgnoreCase(origin))
+                if (!context.getPackageName().equalsIgnoreCase(origin))
                     onMessageReceived(context, origin, intent.getStringExtra(EXTRA_PAYLOAD));
             } else if (ACTION_SQAN_BROADCAST.equalsIgnoreCase(action)) { //forward traffic from SqAN
                 String origin = intent.getStringExtra(EXTRA_ORIGIN);
-                if (!BuildConfig.APPLICATION_ID.equalsIgnoreCase(origin)) {
+                if (!context.getPackageName().equalsIgnoreCase(origin)) {
                     String channel = intent.getStringExtra(SQAN_PACKET_CHANNEL);
                     if ((SosIpcTransceiver.channel != null) && SosIpcTransceiver.channel.equalsIgnoreCase(channel)) { //only handle SOS-T channel broadcasts
                         try {

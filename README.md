@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.sofwerx:swe-android:1.0.3'
+    implementation 'com.github.sofwerx:swe-android:1.0.4'
 }
 ```
 
@@ -39,7 +39,7 @@ dependencies {
 <dependency>
     <groupId>com.github.sofwerx</groupId>
     <artifactId>swe-android</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 

@@ -88,28 +88,31 @@ public class SosIpcTransceiver extends BroadcastReceiver {
      * @param source the application that sent the request; mostly to prevent circular reporting
      * @param input the SOS operation received
      */
-    public void onMessageReceived(Context context,String source,String input) {
+    public void onMessageReceived(final Context context,final String source, final String input) {
         if (source == null) {
             Log.e(TAG,"SOS broadcasts from anonymous senders is not supported");
             return;
         }
-        if (input == null)
-            Log.e(TAG,"Null operation received from SOS broadcast IPC");
-        try {
-            DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = builderFactory.newDocumentBuilder();
-            Document doc = docBuilder.parse(new InputSource(new ByteArrayInputStream(input.getBytes("utf-8"))));
-            if (doc != null) {
-                AbstractSosOperation operation = AbstractSosOperation.newFromXML(doc);
-                if (operation != null) {
-                    if (listener != null)
-                        listener.onSosOperationReceived(operation);
-                }
-                return;
-            }
-        } catch (ParserConfigurationException | IOException | SAXException e) {
+        if (input == null) {
+            Log.e(TAG, "Null operation received from SOS broadcast IPC");
+            return;
         }
-        Log.e(TAG,"SOS IPC broadcast was not XML: "+input);
+        new Thread(() -> {
+            try {
+                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder docBuilder = builderFactory.newDocumentBuilder();
+                Document doc = docBuilder.parse(new InputSource(new ByteArrayInputStream(input.getBytes("utf-8"))));
+                if (doc != null) {
+                    AbstractSosOperation operation = AbstractSosOperation.newFromXML(doc);
+                    if (operation != null) {
+                        if (listener != null)
+                            listener.onSosOperationReceived(operation);
+                    }
+                }
+            } catch (ParserConfigurationException | IOException | SAXException e) {
+                Log.e(TAG,"SOS IPC broadcast was not XML: "+input);
+            }
+        }).start();
     }
 
     /**
@@ -117,22 +120,25 @@ public class SosIpcTransceiver extends BroadcastReceiver {
      * @param context
      * @param operation
      */
-    public void broadcast(Context context, AbstractSosOperation operation) throws SosException {
+    public void broadcast(final Context context, final AbstractSosOperation operation) throws SosException {
         if (operation != null) {
             if (!operation.isValid()) {
                 throw new SosException(operation.getClass().getSimpleName()+" does not have all required information");
             }
-            Document doc = null;
-            try {
-                doc = operation.toXML();
-            } catch (ParserConfigurationException e) {
-                throw new SosException("Unable to create document: "+e.getMessage());
-            }
-            try {
-                broadcast(context,toString(doc));
-            } catch (Exception ex) {
-                throw new SosException("Unable to convert XML document to string: "+ex.getMessage());
-            }
+            new Thread(() -> {
+                Document doc = null;
+                try {
+                    doc = operation.toXML();
+                } catch (ParserConfigurationException e) {
+                    //throw new SosException("Unable to create document: " + e.getMessage());
+                }
+                try {
+                    if (doc != null)
+                        broadcast(context, toString(doc));
+                } catch (Exception ex) {
+                    //throw new SosException("Unable to convert XML document to string: " + ex.getMessage());
+                }
+            }).start();
         }
     }
 

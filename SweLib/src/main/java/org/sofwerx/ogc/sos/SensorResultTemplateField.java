@@ -68,6 +68,7 @@ public class SensorResultTemplateField {
     protected final static String NAME_CODE = "code";
     protected final static String TAG_NAME_FIELD = "swe:field";
     protected final static String TAG_NAME_QUANTITY = "swe:Quantity";
+    protected final static String TAG_NAME_TEXT = "swe:Text";
     protected final static String TAG_NAME_UOM = "swe:uom";
     protected final static String TAG_NAME_LABEL = "swe:label";
     protected final static String NAME_REFERENCE_FRAME = "referenceFrame";

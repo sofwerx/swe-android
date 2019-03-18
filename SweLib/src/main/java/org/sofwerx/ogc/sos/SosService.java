@@ -22,6 +22,8 @@ public class SosService implements SosMessageListener {
     private Handler handler;
     private SosMessageListener listener;
     private String serverURL;
+    private String username;
+    private String password;
     private Context context;
     private SosSensor sosSensor;
     private SosIpcTransceiver transceiver;
@@ -31,13 +33,16 @@ public class SosService implements SosMessageListener {
     private boolean sosHttpBroadcast;
 
     /**
-     * Creates a new SOS Service
+     * Creates a new SosService
      * @param context
      * @param sosSensor
+     * @param sosServerURL
+     * @param username
+     * @param password
      * @param turnOn true == the service will start running immediately; false means the service will initiate but will not start sending/receiving
      * @param enableIpcBroadcast
      */
-    public SosService(Context context, SosSensor sosSensor, String sosServerURL, final boolean turnOn, final boolean enableIpcBroadcast) {
+    public SosService(Context context, SosSensor sosSensor, String sosServerURL, String username, String password, final boolean turnOn, final boolean enableIpcBroadcast) {
         if (context == null)
             Log.e(SosIpcTransceiver.TAG,"SosService should not be passed a null context");
         this.context = context;
@@ -45,6 +50,8 @@ public class SosService implements SosMessageListener {
         if (context instanceof SosMessageListener)
             listener = (SosMessageListener)context;
         this.serverURL = sosServerURL;
+        this.username = username;
+        this.password = password;
         sosThread = new HandlerThread("SosService") {
             @Override
             protected void onLooperPrepared() {
@@ -57,6 +64,10 @@ public class SosService implements SosMessageListener {
         this.ipcBroadcast = enableIpcBroadcast;
         this.sosHttpBroadcast = (sosServerURL != null);
         SosIpcTransceiver.setChannel(DEFAULT_SWE_CHANNEL);
+    }
+
+    public SosService(Context context, SosSensor sosSensor, String sosServerURL, final boolean turnOn, final boolean enableIpcBroadcast) {
+        this(context, sosSensor, sosServerURL, null, null, turnOn, enableIpcBroadcast);
     }
 
     /**
@@ -120,7 +131,7 @@ public class SosService implements SosMessageListener {
                     if ((serverURL != null) && sosHttpBroadcast) {
                         Log.d(SosIpcTransceiver.TAG,"Broadcasting SOS operation to "+serverURL);
                         try {
-                            String result = HttpHelper.post(serverURL,SosIpcTransceiver.toString(operation.toXML()));
+                            String result = HttpHelper.post(serverURL, username, password,SosIpcTransceiver.toString(operation.toXML()));
                             AbstractSosOperation responseOperation = AbstractSosOperation.newFromXmlString(result);
                             if (responseOperation == null) {
                                 Log.e(SosIpcTransceiver.TAG,"Unable to parse response from server: "+result);

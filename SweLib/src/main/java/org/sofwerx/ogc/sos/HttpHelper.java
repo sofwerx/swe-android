@@ -1,5 +1,6 @@
 package org.sofwerx.ogc.sos;
 
+import android.util.Base64;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -9,13 +10,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
 public class HttpHelper {
-    public static String post(String serverURL, String body) throws IOException {
+    public static String post(String serverURL, String username, String password, String body) throws IOException {
         if (serverURL == null)
             throw new IOException("Cannot connect to a null server URL");
         if (body == null)
@@ -36,6 +38,14 @@ public class HttpHelper {
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type","application/soap+xml");
         conn.setDoInput(true);
+        if ((username != null) && (password != null)) {
+            try {
+                byte[] data = (username + ":" + password).getBytes("UTF-8");
+                String encoded = new String(Base64.encode(data, Base64.DEFAULT));
+                conn.setRequestProperty("Authorization", "Basic " + encoded);
+            } catch (UnsupportedEncodingException ignore) {
+            }
+        }
         //conn.setDoOutput(true);
         conn.setInstanceFollowRedirects(false);
 

@@ -50,8 +50,8 @@ public class SosService implements SosMessageListener {
         if (context instanceof SosMessageListener)
             listener = (SosMessageListener)context;
         this.serverURL = sosServerURL;
-        this.username = username;
-        this.password = password;
+        setSosServerUsername(username);
+        setSosServerPassword(password);
         sosThread = new HandlerThread("SosService") {
             @Override
             protected void onLooperPrepared() {
@@ -201,6 +201,18 @@ public class SosService implements SosMessageListener {
     public void setListener(SosMessageListener listener) { this.listener = listener; }
     public SosSensor getSosSensor() { return sosSensor; }
     public void setSosServerUrl(String serverUrl) { this.serverURL = serverUrl; }
+    public void setSosServerUsername(String username) {
+        if ((username != null) && (username.length() == 0))
+            this.username = null;
+        else
+            this.username = username;
+    }
+    public void setSosServerPassword(String password) {
+        if ((password != null) && (password.length() == 0))
+            this.password = null;
+        else
+            this.password = password;
+    }
 
     /**
      * Sets the current sosSensor; if the sosSensor already has enough information

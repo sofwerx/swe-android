@@ -4,9 +4,6 @@ import android.util.Log;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-
-import java.util.ArrayList;
 
 /**
  * This is used for templates that involve text rather than quantity
@@ -43,5 +40,10 @@ public class SensorTextResultTemplateField  extends SensorResultTemplateField {
         if (field == null)
             return;
         setName(field.getAttribute(NAME_NAME));
+    }
+
+    @Override
+    public boolean isValid() {
+        return (getName() != null) && (getQuantityDefinition() != null);
     }
 }

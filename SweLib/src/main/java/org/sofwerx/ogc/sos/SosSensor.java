@@ -9,6 +9,7 @@ import java.util.ArrayList;
  * multiple measurements.
  */
 public class SosSensor {
+    public final static int MIN_ID_LENGTH = 6;
     private String assignedOffering;
     private String assignedProcedure;
     private String assignedTemplate;
@@ -29,7 +30,7 @@ public class SosSensor {
      * @param id the display ID on most systems (i.e. "TORGI WISKEY 35")
      * @param uniqueId the unique ID for this sensor (i.e. "http://www.sofwerx.org/torgi/wiskey35")
      * @param shortName the short name for what this sensor is (i.e. "TORGI")
-     * @param longName the long name for this sensor (i.e. "")
+     * @param longName the long name for this sensor (i.e. "Tactical Observation of RF GNSS Interference sensor")
      */
     public SosSensor(String id, String uniqueId, String shortName, String longName) {
         this();

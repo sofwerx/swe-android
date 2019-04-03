@@ -175,7 +175,8 @@ public class SosIpcTransceiver extends BroadcastReceiver {
             return;
         }
         Intent intent = new Intent(ACTION_SOS);
-        intent.putExtra(EXTRA_ORIGIN, BuildConfig.APPLICATION_ID);
+        //intent.putExtra(EXTRA_ORIGIN, BuildConfig.APPLICATION_ID);
+        intent.putExtra(EXTRA_ORIGIN, context.getPackageName());
         intent.putExtra(EXTRA_PAYLOAD,sosOperation);
         context.sendBroadcast(intent);
 
@@ -184,7 +185,8 @@ public class SosIpcTransceiver extends BroadcastReceiver {
             try {
                 byte[] bytes = sosOperation.getBytes("UTF-8");
                 Intent sqanIntent = new Intent(ACTION_SQAN_BROADCAST);
-                sqanIntent.putExtra(EXTRA_ORIGIN, BuildConfig.APPLICATION_ID);
+                //sqanIntent.putExtra(EXTRA_ORIGIN, BuildConfig.APPLICATION_ID);
+                sqanIntent.putExtra(EXTRA_ORIGIN, context.getPackageName());
                 sqanIntent.putExtra(SQAN_PACKET_BYTES, bytes);
                 sqanIntent.putExtra(SQAN_PACKET_CHANNEL, channel);
                 context.sendBroadcast(sqanIntent);

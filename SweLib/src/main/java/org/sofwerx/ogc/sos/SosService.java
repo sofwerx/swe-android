@@ -102,6 +102,11 @@ public class SosService implements SosMessageListener {
                 OperationInsertResult operation = new OperationInsertResult(sosSensor);
                 if (operation.isValid())
                     broadcast(operation);
+                else {
+                    if (listener != null)
+                        listener.onSosError("Unable to send sensor readings as sensor measurements are not fully initialized");
+                    Log.d(SosIpcTransceiver.TAG, "Cannot broadcast sensor readings; OperationInsertResult did not have valid data");
+                }
             } else {
                 registerSensor();
                 sendSensorReadingWhenReady.set(true);

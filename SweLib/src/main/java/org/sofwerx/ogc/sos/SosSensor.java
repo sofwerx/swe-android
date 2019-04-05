@@ -59,6 +59,17 @@ public class SosSensor {
     }
 
     /**
+     * Removes any assignments (Assigned Offering, Assigned Procedure, Assigned Template) that
+     * may have been made by an SOS Server. This is primarily used when switching to a new
+     * server.
+     */
+    public void clearAssignments() {
+        assignedOffering = null;
+        assignedProcedure = null;
+        assignedTemplate = null;
+    }
+
+    /**
      * Gets the assigned procedure ID provided by the SOS
      * (i.e. "http://www.sofwerx.org/torgi/wiskey35")
      * @return

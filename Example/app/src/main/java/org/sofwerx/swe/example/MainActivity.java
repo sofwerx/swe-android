@@ -126,11 +126,7 @@ public class MainActivity extends AppCompatActivity implements SosMessageListene
         sendButton.setOnClickListener(v -> sendData());
         eraseAssignedButton.setOnClickListener(v -> {
             if (sosSensor != null) {
-                sosSensor = null;
-                if (sosService != null) {
-                    sosService.shutdown();
-                    sosService = null;
-                }
+                sosSensor.clearAssignments();
                 log("Sensor assignments from server removed");
                 updateVisibility();
             }

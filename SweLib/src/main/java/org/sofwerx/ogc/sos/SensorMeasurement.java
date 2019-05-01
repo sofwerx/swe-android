@@ -21,6 +21,33 @@ public class SensorMeasurement {
         this.format = field;
     }
 
+    public static SensorMeasurement newFromObject(String key, Object value) {
+        if (key == null)
+            return null;
+        SensorMeasurement measurement = null;
+        if (key.equalsIgnoreCase(SensorMeasurementTime.NAME))
+            measurement = new SensorMeasurementTime();
+        else if (key.equalsIgnoreCase(SensorMeasurementLocation.NAME))
+            measurement = new SensorMeasurementLocation();
+        else
+            measurement = new SensorMeasurement(new SensorResultTemplateField(key,null,null));
+        if (measurement != null)
+            measurement.setValue(value);
+        return measurement;
+    }
+
+    public boolean isSame(SensorMeasurement other) {
+        if ((other == null) || (format == null) || (format.getName() == null) || (other.format == null))
+            return false;
+        return format.getName().equalsIgnoreCase(other.format.getName());
+    }
+
+    public void update(SensorMeasurement other) {
+        if (other == null)
+            return;
+        value = other.value;
+    }
+
     /**
      * Gets the format used to report this measurement
      * @return

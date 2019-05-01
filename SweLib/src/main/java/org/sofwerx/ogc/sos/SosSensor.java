@@ -2,7 +2,13 @@ package org.sofwerx.ogc.sos;
 
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * This is the overall device/sensor that will be reporting to the SOS. This sensor can make report
@@ -18,6 +24,7 @@ public class SosSensor {
     private String longName;
     private String shortName;
     private ArrayList<SensorMeasurement> measurements;
+    private ArrayList<String> observableProperties;
 
     public SosSensor() {
         assignedOffering = null;
@@ -242,4 +249,95 @@ public class SosSensor {
             measurements = other.measurements;
     }
 
+    public void addObservableProperty(String observableProperty) {
+        if (observableProperty != null) {
+            if (observableProperties == null) {
+                observableProperties = new ArrayList<>();
+                observableProperties.add(observableProperty);
+                return;
+            }
+            for (String current:observableProperties) {
+                if (observableProperty.equalsIgnoreCase(current))
+                    return;
+            }
+            observableProperties.add(observableProperty);
+        }
+    }
+
+    public void setObservableProperty() {
+        if (uniqueId != null)
+            addObservableProperty(uniqueId+"_1");
+    }
+
+    /**
+     * Gets the first observable property
+     * @return first observableProperty or null if none exists
+     */
+    public String getFirstObservableProperty() {
+        if ((observableProperties == null) || observableProperties.isEmpty())
+            return null;
+        return observableProperties.get(0);
+    }
+
+    public ArrayList<String> getObservableProperties() {
+        return observableProperties;
+    }
+
+    /**
+     * Intakes a JSON version of GetResult response and parse it into SensorMeasurements
+     * @param obj
+     */
+    public void parseSensors(JSONObject obj) {
+        if (obj == null)
+            return;
+        Iterator<String> iter = obj.keys();
+        while (iter.hasNext()) {
+            String key = iter.next();
+            try {
+                Object value = obj.get(key);
+                SensorMeasurement measurement = getSensorMeasurement(key);
+                if (measurement == null) {
+                    measurement = SensorMeasurement.newFromObject(key,value);
+                    if (measurement != null) {
+                        if (measurements == null)
+                            measurements = new ArrayList<>();
+                        measurements.add(measurement);
+                    }
+                } else
+                    measurement.setValue(value);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private SensorMeasurement getSensorMeasurement(String key) {
+        if ((key == null) || (measurements == null) || measurements.isEmpty())
+            return null;
+        for (SensorMeasurement measurement:measurements) {
+            if (key.equalsIgnoreCase(measurement.getName()))
+                return measurement;
+        }
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        StringWriter out = new StringWriter();
+        if (id != null)
+            out.append(id);
+        out.append(": ");
+        if ((measurements != null) && !measurements.isEmpty()) {
+            boolean first = true;
+            for (SensorMeasurement measurement:measurements) {
+                if (first)
+                    first = false;
+                else
+                    out.append(", ");
+                out.append(measurement.toString());
+            }
+        } else
+            out.append("no measurements");
+        return out.toString();
+    }
 }

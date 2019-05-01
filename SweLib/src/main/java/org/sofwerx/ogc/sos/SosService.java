@@ -5,8 +5,14 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Pair;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -31,6 +37,7 @@ public class SosService implements SosMessageListener {
     private AtomicBoolean sendSensorReadingWhenReady = new AtomicBoolean(false);
     private boolean ipcBroadcast;
     private boolean sosHttpBroadcast;
+    private boolean sensorMode = true;
 
     /**
      * Creates a new SosService
@@ -47,6 +54,10 @@ public class SosService implements SosMessageListener {
             Log.e(SosIpcTransceiver.TAG,"SosService should not be passed a null context");
         this.context = context;
         this.sosSensor = sosSensor;
+        if (sosSensor == null) {
+            sensorMode = false;
+            Log.d(SosIpcTransceiver.TAG,"No sensor provided for SosService constructor, so SosService assumed to be running in server (rather than) sensor mode. To switch to sensor mode, use setSensorMode()");
+        }
         if (context instanceof SosMessageListener)
             listener = (SosMessageListener)context;
         this.serverURL = sosServerURL;
@@ -82,7 +93,8 @@ public class SosService implements SosMessageListener {
                     transceiver = new SosIpcTransceiver(this);
                     IntentFilter intentFilter = new IntentFilter(SosIpcTransceiver.ACTION_SOS);
                     context.registerReceiver(transceiver, intentFilter);
-                    broadcastSensorReadings();
+                    if (sensorMode)
+                        broadcastSensorReadings();
                 }
             } else {
                 Log.i(SosIpcTransceiver.TAG,"SosService turned OFF");
@@ -118,7 +130,7 @@ public class SosService implements SosMessageListener {
         }
     }
 
-    private void broadcast(AbstractSosOperation operation) {
+    public void broadcast(AbstractSosOperation operation) {
         if (handler != null) {
             handler.post(() -> {
                 Log.d(SosIpcTransceiver.TAG,"Broadcasting "+operation.getClass().getName());
@@ -136,7 +148,7 @@ public class SosService implements SosMessageListener {
                     if ((serverURL != null) && sosHttpBroadcast) {
                         Log.d(SosIpcTransceiver.TAG,"Broadcasting SOS operation to "+serverURL);
                         try {
-                            String result = HttpHelper.post(serverURL, username, password,SosIpcTransceiver.toString(operation.toXML()));
+                            String result = HttpHelper.post(serverURL, username, password,SosIpcTransceiver.toString(operation.toXML()),!sensorMode);
                             AbstractSosOperation responseOperation = AbstractSosOperation.newFromXmlString(result);
                             if (responseOperation == null) {
                                 Log.e(SosIpcTransceiver.TAG,"Unable to parse response from server: "+result);
@@ -206,6 +218,7 @@ public class SosService implements SosMessageListener {
     public void setListener(SosMessageListener listener) { this.listener = listener; }
     public SosSensor getSosSensor() { return sosSensor; }
     public void setSosServerUrl(String serverUrl) { this.serverURL = serverUrl; }
+    public String getSosServerUrl() { return serverURL; }
     public void setSosServerUsername(String username) {
         if ((username != null) && (username.length() == 0))
             this.username = null;
@@ -295,4 +308,60 @@ public class SosService implements SosMessageListener {
      * @param enable
      */
     public void setHttpBroadcast(boolean enable) { this.sosHttpBroadcast = enable; }
+
+    /**
+     * Is this service working in sensor mode (as opposed to server mode)
+     * @return true == sensor mode; false == server mode
+     */
+    public boolean isSensorMode() {
+        return sensorMode;
+    }
+
+    /**
+     * Sets this service mode
+     * @param sensorMode true == sensor mode; false == server mode
+     */
+    public void setSensorMode(boolean sensorMode) { this.sensorMode = sensorMode; }
+    public void setSensorMode() { setSensorMode(true); }
+
+    public void getSensorResultFromServer(SosSensor sensor) { getSensorResultFromServer(serverURL,sensor); }
+
+    public static void getSensorResultFromServer(String sosServiceUrl,SosSensor sensor) {
+        if ((sensor == null) || (sosServiceUrl == null))
+            return;
+        if ((sensor.getFirstObservableProperty() == null) || (sensor.getAssignedOffering() == null)) {
+            Log.w(SosIpcTransceiver.TAG,"Unable to get results as sensor does not have an offering and/or observableProperty");
+            return;
+        }
+        ArrayList<Pair<String,String>> pairs = new ArrayList<>();
+        pairs.add(new Pair("service","SOS"));
+        pairs.add(new Pair("version","2.0"));
+        pairs.add(new Pair("request","GetResult"));
+        pairs.add(new Pair("offering",sensor.getAssignedOffering()));
+        pairs.add(new Pair("observedProperty",sensor.getFirstObservableProperty()));
+        pairs.add(new Pair("responseFormat","application/json"));
+        //Pair<String,String> timeLimiter = new Pair("temporalFilter","phenomenonTime,now");
+        //pairs.add(timeLimiter);
+        try {
+            String result = HttpHelper.get(sosServiceUrl,pairs);
+            if (result != null) {
+                Log.d(SosIpcTransceiver.TAG, result);
+                try {
+                    sensor.parseSensors(new JSONObject(result));
+                } catch (JSONException e) {
+                    try {
+                        JSONArray array = new JSONArray(result); //this is actually a list of results, so let's get the last one
+                        if ((array == null) || (array.length() < 1))
+                            return;
+                        sensor.parseSensors((JSONObject) array.get(array.length()-1));
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+            Log.e(SosIpcTransceiver.TAG,"Attempt to get results for "+sensor.getId()+" failed: "+e.getMessage());
+        }
+    }
 }

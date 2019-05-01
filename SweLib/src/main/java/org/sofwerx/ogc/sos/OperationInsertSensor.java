@@ -95,8 +95,6 @@ public class OperationInsertSensor extends AbstractSosOperation {
         } catch (Exception e) {
             Log.e(SosIpcTransceiver.TAG,"OperationInsertSensor parsing error: "+e.getMessage());
         }
-
-            //TODO
     }
 
     @Override
@@ -174,7 +172,9 @@ public class OperationInsertSensor extends AbstractSosOperation {
         if (sosSensor.getUniqueId() != null) {
             Element observableProperty = doc.createElement("swes:observableProperty");
             insertSensor.appendChild(observableProperty);
-            observableProperty.setTextContent(sosSensor.getUniqueId()+"_1");
+            if (sosSensor.getObservableProperties() == null)
+                sosSensor.setObservableProperty();
+            observableProperty.setTextContent(sosSensor.getFirstObservableProperty());
         }
 
         Element metadata = doc.createElement("swes:metadata");

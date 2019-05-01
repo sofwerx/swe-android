@@ -38,6 +38,7 @@ public class SosIpcTransceiver extends BroadcastReceiver {
     public final static String TAG = "SosIpc";
     public final static String SOFWERX_LINK_PLACEHOLDER = "http://www.sofwerx.org/placeholder"; //this is used as a placeholder where a URL should be provided for a new standard or feature
     private final static SimpleDateFormat dateFormatISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US);
+    private final static SimpleDateFormat dateFormatBackup = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
     public static final String ACTION_SOS = "org.sofwerx.ogc.ACTION_SOS";
     private static final String EXTRA_PAYLOAD = "SOS";
     private static final String EXTRA_ORIGIN = "src";
@@ -208,7 +209,14 @@ public class SosIpcTransceiver extends BroadcastReceiver {
                 Date date = dateFormatISO8601.parse(time);
                 return date.getTime();
             } catch (ParseException e) {
-                e.printStackTrace();
+                try {
+                    if (time.endsWith("Z"))
+                        time = time.substring(0,time.indexOf('Z'));
+                    Date date = dateFormatBackup.parse(time);
+                    return date.getTime();
+                } catch (ParseException e1) {
+                    e.printStackTrace();
+                }
             }
         }
         return Long.MIN_VALUE;

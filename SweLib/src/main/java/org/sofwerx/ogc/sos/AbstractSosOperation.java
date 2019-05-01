@@ -4,6 +4,8 @@ import android.util.Log;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -32,12 +34,42 @@ public abstract class AbstractSosOperation {
         return null;
     }
 
+    private static Element removeSoap(Document doc) {
+        if (doc == null)
+            return null;
+        Element element = doc.getDocumentElement();
+        Element soapBody;
+        try {
+            Element soapEnvelope;
+            String localName = element.getTagName();
+            if ((localName != null) && localName.contains("soap:Envelope"))
+                soapEnvelope = element;
+            else
+                soapEnvelope = (Element) element.getElementsByTagName("soap:Envelope").item(0);
+            if (soapEnvelope == null)
+                return element;
+            soapBody = (Element) soapEnvelope.getElementsByTagName("soap:Body").item(0);
+        } catch (Exception ignore) {
+            return element;
+        }
+        if (soapBody == null)
+            return element;
+        NodeList children = soapBody.getChildNodes();
+        if ((children != null) && (children.getLength() > 0)) {
+            for (int i=0;i<children.getLength();i++) {
+                if (children.item(i) instanceof Element)
+                    return (Element) children.item(i);
+            }
+        }
+        return element;
+    }
+
     public static AbstractSosOperation newFromXML(Document doc) {
+        Node node = removeSoap(doc);
         AbstractSosOperation operation = null;
         if (doc != null) {
-            Element element = doc.getDocumentElement();
-            if (element != null) {
-                String tagName = element.getTagName();
+            if (node != null) {
+                String tagName = node.getNodeName();
                 if (tagName != null) {
                     if (tagName.contains(OperationInsertSensorResponse.NAMESPACE))
                         operation = new OperationInsertSensorResponse();
@@ -51,8 +83,12 @@ public abstract class AbstractSosOperation {
                         operation = new OperationInsertResultResponse();
                     else if (tagName.contains(OperationInsertResult.NAMESPACE))
                         operation = new OperationInsertResult(defaultSensor);
+                    else if (tagName.contains(OperationGetCapabilitiesResponse.NAMESPACE)) {
+                        //TODO differentiate between GetCapabilities and the response to GetCapabilities
+                        operation = new OperationGetCapabilitiesResponse();
+                    }
                     if (operation != null)
-                        operation.parse(element);
+                        operation.parse((Element)node);
                 }
             }
         }

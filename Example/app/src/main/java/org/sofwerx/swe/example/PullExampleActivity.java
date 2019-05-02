@@ -10,11 +10,16 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -26,6 +31,7 @@ import org.sofwerx.ogc.sos.AbstractSosOperation;
 import org.sofwerx.ogc.sos.HttpHelper;
 import org.sofwerx.ogc.sos.OperationGetCapabilities;
 import org.sofwerx.ogc.sos.OperationGetCapabilitiesResponse;
+import org.sofwerx.ogc.sos.OperationGetResults;
 import org.sofwerx.ogc.sos.SensorMeasurement;
 import org.sofwerx.ogc.sos.SensorMeasurementTime;
 import org.sofwerx.ogc.sos.SensorResultTemplateField;
@@ -42,6 +48,7 @@ import java.util.Random;
 public class PullExampleActivity extends AppCompatActivity implements SosMessageListener {
     private SosService sosService;
     private ArrayList<SosSensor> sensors;
+    private SosSensor currentSensor = null;
 
     @Override
     public void onDestroy() {
@@ -59,6 +66,10 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
     private TextView textCannotSendWarning, textResult;
     private Button sendButton;
     private View viewMeasurements;
+    private ProgressBar progressBar;
+    private Spinner spinner;
+    private ArrayAdapter spinnerArrayAdapter = null;
+    private boolean isWaiting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +85,19 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
         sendButton = findViewById(R.id.send);
         viewMeasurements = findViewById(R.id.viewMeasurements);
         sendButton.setOnClickListener(v -> sendQuery());
+        spinner = findViewById(R.id.spinner);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if ((sensors != null) && (position < sensors.size()))
+                    currentSensor = sensors.get(position);
+                updateVisibility();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+        });
+        progressBar = findViewById(R.id.progressBar);
         checkSendIpc.setOnCheckedChangeListener((buttonView, isChecked) -> {
             updateVisibility();
             if (sosService != null)
@@ -89,6 +113,7 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
     }
 
     private void sendQuery() {
+        isWaiting = true;
         if (sosService == null) {
             String url;
             if (checkSendNet.isChecked())
@@ -100,7 +125,11 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
             log("Querying server...");
             sosService = new SosService(PullExampleActivity.this, null, url, username, sosPassword, true, checkSendIpc.isChecked());
         }
-        sosService.broadcast(new OperationGetCapabilities());
+        updateVisibility();
+        if ((sensors == null) || sensors.isEmpty())
+            sosService.broadcast(new OperationGetCapabilities());
+        else
+            sosService.broadcast(new OperationGetResults(currentSensor));
     }
 
     private final static String PREFS_SEND_IPC = "ipc";
@@ -152,6 +181,28 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
             editSosPassword.setVisibility(View.GONE);
         }
         checkSendingPrereqs();
+        progressBar.setVisibility(isWaiting?View.VISIBLE:View.GONE);
+        if ((sensors == null) || sensors.isEmpty()) {
+            spinner.setVisibility(View.INVISIBLE);
+            sendButton.setText("Request List of Sensors");
+        } else {
+            if (spinnerArrayAdapter == null) {
+                String[] values = new String[sensors.size()];
+                for (int i=0;i<sensors.size();i++) {
+                    if ((sensors.get(i) == null) || (sensors.get(i).getId() == null))
+                        values[i] = "- unknown -";
+                    else
+                        values[i] = sensors.get(i).getId();
+                }
+                spinnerArrayAdapter = new ArrayAdapter(this,
+                        android.R.layout.simple_spinner_dropdown_item,
+                        values);
+                spinner.setAdapter(spinnerArrayAdapter);
+                spinner.setVisibility(View.VISIBLE);
+                spinner.setSelection(0);
+            }
+            sendButton.setText("Request Sensor Results");
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -228,9 +279,9 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
 
     @Override
     public void onSosOperationReceived(final AbstractSosOperation operation) {
+        isWaiting = false;
         if (operation != null) {
             runOnUiThread(() -> {
-                log(operation.getClass().getSimpleName() + " received");
                 updateVisibility();
             });
             if (operation instanceof OperationGetCapabilitiesResponse) {
@@ -238,39 +289,45 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
                 if ((opSensors != null) && !opSensors.isEmpty()) {
                     Log.d(SosIpcTransceiver.TAG,opSensors.size()+" sensors described by server");
                     for (SosSensor sensor:opSensors) {
-                        //TODO testing
-                        if ((sensor.getId() != null) && sensor.getId().contains("405-TORGI")) {
-                            Log.d(SosIpcTransceiver.TAG,"... to include a TORGI sensor. Requesting most recent readings...");
-                            sosService.getSensorResultFromServer(sensor);
-                            SosSensor current = findSensor(sensor);
-                            if (sensors == null)
-                                sensors = new ArrayList<>();
-                            if (current == null)
-                                sensors.add(sensor);
-                            else
-                                current.update(sensor);
-                        }
+                        SosSensor current = findSensor(sensor);
+                        if (sensors == null)
+                            sensors = new ArrayList<>();
+                        if (current == null)
+                            sensors.add(sensor);
+                        else
+                            current.update(sensor);
                     }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if ((sensors != null) && !sensors.isEmpty()) {
-                                StringWriter out = new StringWriter();
-                                boolean first = true;
-                                for (SosSensor a:sensors) {
-                                    if (first)
-                                        first = false;
-                                    else
-                                        out.append("\r\n");
-                                    out.append(a.toString());
-                                }
-                                log(out.toString());
-                            } else
-                                log("No sensor data received");
-                        }
+                    runOnUiThread(() -> {
+                        if ((sensors != null) && !sensors.isEmpty()) {
+                            Toast.makeText(PullExampleActivity.this,sensors.size()+" sensor"+((sensors.size()==1)?"":"s")+" available",Toast.LENGTH_SHORT).show();
+                            StringWriter out = new StringWriter();
+                            out.append("Available sensors:\r\n");
+                            boolean first = true;
+                            for (SosSensor a:sensors) {
+                                if (first)
+                                    first = false;
+                                else
+                                    out.append("\r\n");
+                                out.append(a.toString());
+                            }
+                            log(out.toString());
+                            log("\r\n");
+                        } else
+                            log("No sensor data received");
                     });
                 }
+            } else if (operation instanceof OperationGetResults) {
+                final SosSensor received = ((OperationGetResults)operation).getSensor();
+                runOnUiThread(() -> {
+                    if (received == null)
+                        log("GetResults failed to get any sensor information");
+                    else
+                        log(received.toString());
+                });
             }
+            runOnUiThread(() -> {
+                updateVisibility();
+            });
         }
     }
 
@@ -286,8 +343,10 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
 
     @Override
     public void onSosError(final String message) {
+        isWaiting = false;
         runOnUiThread(() -> {
             log(message);
+            updateVisibility();
         });
     }
 

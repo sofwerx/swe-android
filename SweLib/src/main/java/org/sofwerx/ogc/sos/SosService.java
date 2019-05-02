@@ -147,18 +147,52 @@ public class SosService implements SosMessageListener {
                     }
                     if ((serverURL != null) && sosHttpBroadcast) {
                         Log.d(SosIpcTransceiver.TAG,"Broadcasting SOS operation to "+serverURL);
-                        try {
-                            String result = HttpHelper.post(serverURL, username, password,SosIpcTransceiver.toString(operation.toXML()),!sensorMode);
-                            AbstractSosOperation responseOperation = AbstractSosOperation.newFromXmlString(result);
-                            if (responseOperation == null) {
-                                Log.e(SosIpcTransceiver.TAG,"Unable to parse response from server: "+result);
+                        if (operation instanceof OperationGetResults) { //we need to use GET with JSON for this operation
+                            SosSensor sensor = ((OperationGetResults) operation).getSensor();
+                            if (!operation.isValid()) {
                                 if (listener != null)
-                                    listener.onSosError("Unexpected response from SOS server");
-                            } else
-                                onSosOperationReceived(responseOperation);
-                        } catch (IOException | TransformerException | ParserConfigurationException e) {
-                            if (listener != null)
-                                listener.onSosError("Unable to connect to SOS server: "+e.getMessage());
+                                    listener.onSosError("Unable to GetResult without a sensor, an assignedOffering, and at least one observableProperty");
+                                return;
+                            }
+                            try {
+                                String result = HttpHelper.get(serverURL,((OperationGetResults) operation).getPairs());
+                                try {
+                                    sensor.parseSensors(new JSONObject(result));
+                                    if (listener != null)
+                                        listener.onSosOperationReceived(operation);
+                                } catch (JSONException e) {
+                                    try {
+                                        JSONArray array = new JSONArray(result); //this is actually a list of results, so let's get the last one
+                                        if ((array == null) || (array.length() < 1))
+                                            return;
+                                        sensor.parseSensors((JSONObject) array.get(array.length() - 1));
+                                        if (listener != null)
+                                            listener.onSosOperationReceived(operation);
+                                    } catch (JSONException e1) {
+                                        if (listener != null)
+                                            listener.onSosError("Unable to parse "+result);
+                                    }
+                                }
+                            } catch (IOException e) {
+                                Log.e(SosIpcTransceiver.TAG,"Attempt to get results for "+sensor.getId()+" failed: "+e.getMessage());
+
+                                if (listener != null)
+                                    listener.onSosError("Unable to connect to SOS server: " + e.getMessage());
+                            }
+                        } else {
+                            try {
+                                String result = HttpHelper.post(serverURL, username, password, SosIpcTransceiver.toString(operation.toXML()), !sensorMode);
+                                AbstractSosOperation responseOperation = AbstractSosOperation.newFromXmlString(result);
+                                if (responseOperation == null) {
+                                    Log.e(SosIpcTransceiver.TAG, "Unable to parse response from server: " + result);
+                                    if (listener != null)
+                                        listener.onSosError("Unexpected response from SOS server");
+                                } else
+                                    onSosOperationReceived(responseOperation);
+                            } catch (IOException | TransformerException | ParserConfigurationException e) {
+                                if (listener != null)
+                                    listener.onSosError("Unable to connect to SOS server: " + e.getMessage());
+                            }
                         }
                     }
                 } else {
@@ -323,45 +357,4 @@ public class SosService implements SosMessageListener {
      */
     public void setSensorMode(boolean sensorMode) { this.sensorMode = sensorMode; }
     public void setSensorMode() { setSensorMode(true); }
-
-    public void getSensorResultFromServer(SosSensor sensor) { getSensorResultFromServer(serverURL,sensor); }
-
-    public static void getSensorResultFromServer(String sosServiceUrl,SosSensor sensor) {
-        if ((sensor == null) || (sosServiceUrl == null))
-            return;
-        if ((sensor.getFirstObservableProperty() == null) || (sensor.getAssignedOffering() == null)) {
-            Log.w(SosIpcTransceiver.TAG,"Unable to get results as sensor does not have an offering and/or observableProperty");
-            return;
-        }
-        ArrayList<Pair<String,String>> pairs = new ArrayList<>();
-        pairs.add(new Pair("service","SOS"));
-        pairs.add(new Pair("version","2.0"));
-        pairs.add(new Pair("request","GetResult"));
-        pairs.add(new Pair("offering",sensor.getAssignedOffering()));
-        pairs.add(new Pair("observedProperty",sensor.getFirstObservableProperty()));
-        pairs.add(new Pair("responseFormat","application/json"));
-        //Pair<String,String> timeLimiter = new Pair("temporalFilter","phenomenonTime,now");
-        //pairs.add(timeLimiter);
-        try {
-            String result = HttpHelper.get(sosServiceUrl,pairs);
-            if (result != null) {
-                Log.d(SosIpcTransceiver.TAG, result);
-                try {
-                    sensor.parseSensors(new JSONObject(result));
-                } catch (JSONException e) {
-                    try {
-                        JSONArray array = new JSONArray(result); //this is actually a list of results, so let's get the last one
-                        if ((array == null) || (array.length() < 1))
-                            return;
-                        sensor.parseSensors((JSONObject) array.get(array.length()-1));
-                    } catch (Exception e1) {
-                        e1.printStackTrace();
-                    }
-                    e.printStackTrace();
-                }
-            }
-        } catch (IOException e) {
-            Log.e(SosIpcTransceiver.TAG,"Attempt to get results for "+sensor.getId()+" failed: "+e.getMessage());
-        }
-    }
 }

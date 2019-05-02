@@ -2,7 +2,6 @@ package org.sofwerx.ogc.sos;
 
 import android.util.Log;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -326,8 +325,8 @@ public class SosSensor {
         StringWriter out = new StringWriter();
         if (id != null)
             out.append(id);
-        out.append(": ");
         if ((measurements != null) && !measurements.isEmpty()) {
+            out.append(": ");
             boolean first = true;
             for (SensorMeasurement measurement:measurements) {
                 if (first)
@@ -336,8 +335,7 @@ public class SosSensor {
                     out.append(", ");
                 out.append(measurement.toString());
             }
-        } else
-            out.append("no measurements");
+        }
         return out.toString();
     }
 }

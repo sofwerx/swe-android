@@ -11,6 +11,7 @@ A quick way to send sensor data to an OGC Sensor Observation Service - Transacti
 1. [What is SOS-T](#what-is)
 1. [How SOS-T Works](#brief-sos)
 1. [How to Send Sensor Data](#how-to)
+1. [How to Get Sensor Data](#how-to-receive)
 
 <h2 id="quick-start">Quick Start</h2>
 
@@ -120,3 +121,8 @@ When you are finally done communicating with the server, clean up the server con
 ```java
 sosService.shutdown();
 ```
+
+<h2 id="how-to-receive">How to Get Sensor Data</h2>
+
+Although outside of the original scope of this library, you can also use swe-android to pull data from an **SOS 2.0** compatible server. swe-library will retrieve a list of sensors and will allow you to get the latest sensor data for a particular sensor to include automatically polling the server to regularly get sensor data. To see how this is implemented, check out the PullExampleActivity in the Example app.<br/>
+swe-android will also except a limited number of **SOS-T** commands to allow one app running swe-android to share OGS SOS data with another app running swe-android. This is mostly a temporary work around to provide interim connectivity while more robust solutions like **Open Sensor Hub** become fully integrated.

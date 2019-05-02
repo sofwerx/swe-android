@@ -38,6 +38,8 @@ public class SosService implements SosMessageListener {
     private boolean ipcBroadcast;
     private boolean sosHttpBroadcast;
     private boolean sensorMode = true;
+    private AtomicBoolean shouldPollServer = new AtomicBoolean(false);
+    private long pollInterval = 1000l * 15l; //default server polling interval
 
     /**
      * Creates a new SosService
@@ -81,6 +83,45 @@ public class SosService implements SosMessageListener {
         this(context, sosSensor, sosServerURL, null, null, turnOn, enableIpcBroadcast);
     }
 
+    public boolean startPolling() {
+        if (!shouldPollServer.get()) {
+            if (handler == null) {
+                Log.d(SosIpcTransceiver.TAG,"cannot setup regular server polling as handler is not yet assigned");
+                return false;
+            }
+            shouldPollServer.set(true);
+            handler.post(repeatPollServer);
+            return true;
+        }
+        return true;
+    }
+
+    public void stopPolling() {
+        shouldPollServer.set(false);
+    }
+
+    /**
+     * TIme between polling of the SOS server for sensor data
+     * @param interval time (in ms)
+     */
+    public void setPollingInterval(long interval) { pollInterval = interval; }
+    public boolean isPollingServer() { return shouldPollServer.get(); }
+
+    private Runnable repeatPollServer = new Runnable() {
+        @Override
+        public void run() {
+            if (shouldPollServer.get()) {
+                if (sosSensor != null) {
+                    OperationGetResults op = new OperationGetResults(sosSensor);
+                    if (op.isValid())
+                        broadcast(op);
+                }
+                if (handler != null)
+                    handler.postDelayed(repeatPollServer, pollInterval);
+            }
+        }
+    };
+
     /**
      * Toggles between on (active/running/transmitting and receiving) and off (paused)
      * @param on true = on/active/transmitting and receiving
@@ -95,6 +136,8 @@ public class SosService implements SosMessageListener {
                     context.registerReceiver(transceiver, intentFilter);
                     if (sensorMode)
                         broadcastSensorReadings();
+                    else
+                        startPolling();
                 }
             } else {
                 Log.i(SosIpcTransceiver.TAG,"SosService turned OFF");
@@ -209,6 +252,7 @@ public class SosService implements SosMessageListener {
 
     public void shutdown() {
         Log.i(SosIpcTransceiver.TAG,"Shutting down SosServer");
+        stopPolling();
         setOn(false);
         if (sosThread != null) {
             if (handler != null)
@@ -251,6 +295,7 @@ public class SosService implements SosMessageListener {
     public SosMessageListener getListener() { return listener; }
     public void setListener(SosMessageListener listener) { this.listener = listener; }
     public SosSensor getSosSensor() { return sosSensor; }
+    public void setSensor(SosSensor sensor) { this.sosSensor = sensor; }
     public void setSosServerUrl(String serverUrl) { this.serverURL = serverUrl; }
     public String getSosServerUrl() { return serverURL; }
     public void setSosServerUsername(String username) {

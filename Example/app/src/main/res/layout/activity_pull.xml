@@ -138,6 +138,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
+            <CheckBox
+                android:id="@+id/checkPoll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Periodically poll server for results" />
+
+            <ProgressBar
+                android:id="@+id/progressBarPolling"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true" />
+
             <Button
                 android:id="@+id/send"
                 android:layout_width="match_parent"

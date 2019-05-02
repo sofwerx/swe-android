@@ -14,6 +14,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
@@ -48,7 +49,6 @@ import java.util.Random;
 public class PullExampleActivity extends AppCompatActivity implements SosMessageListener {
     private SosService sosService;
     private ArrayList<SosSensor> sensors;
-    private SosSensor currentSensor = null;
 
     @Override
     public void onDestroy() {
@@ -62,14 +62,15 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
      */
 
     private TextInputEditText editSosServerUrl, editSosUsername, editSosPassword;
-    private CheckBox checkSendIpc, checkSendNet;
+    private CheckBox checkSendIpc, checkSendNet, checkPoll;
     private TextView textCannotSendWarning, textResult;
     private Button sendButton;
     private View viewMeasurements;
-    private ProgressBar progressBar;
+    private ProgressBar progressBar, progressBarPolling;
     private Spinner spinner;
     private ArrayAdapter spinnerArrayAdapter = null;
     private boolean isWaiting = false;
+    private boolean systemChangingCheckPoll = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,11 +87,16 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
         viewMeasurements = findViewById(R.id.viewMeasurements);
         sendButton.setOnClickListener(v -> sendQuery());
         spinner = findViewById(R.id.spinner);
+        checkPoll = findViewById(R.id.checkPoll);
+        progressBarPolling = findViewById(R.id.progressBarPolling);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if ((sensors != null) && (position < sensors.size()))
-                    currentSensor = sensors.get(position);
+                if ((sensors != null) && (position < sensors.size()) && (sosService != null)) {
+                    sosService.setSensor(sensors.get(position));
+                    if (checkPoll.isChecked())
+                        sosService.startPolling();
+                }
                 updateVisibility();
             }
 
@@ -107,6 +113,15 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
             updateVisibility();
             if (sosService != null)
                 sosService.setSosServerUrl(isChecked?editSosServerUrl.getText().toString():null);
+        });
+        checkPoll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if ((!systemChangingCheckPoll) && (sosService != null)) {
+                if (isChecked)
+                    sosService.startPolling();
+                else
+                    sosService.stopPolling();
+                updateVisibility();
+            }
         });
         textResult.setMovementMethod(new ScrollingMovementMethod());
         loadValuesFromPreferences();
@@ -129,7 +144,7 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
         if ((sensors == null) || sensors.isEmpty())
             sosService.broadcast(new OperationGetCapabilities());
         else
-            sosService.broadcast(new OperationGetResults(currentSensor));
+            sosService.broadcast(new OperationGetResults(sosService.getSosSensor()));
     }
 
     private final static String PREFS_SEND_IPC = "ipc";
@@ -184,6 +199,8 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
         progressBar.setVisibility(isWaiting?View.VISIBLE:View.GONE);
         if ((sensors == null) || sensors.isEmpty()) {
             spinner.setVisibility(View.INVISIBLE);
+            checkPoll.setVisibility(View.INVISIBLE);
+            progressBarPolling.setVisibility(View.INVISIBLE);
             sendButton.setText("Request List of Sensors");
         } else {
             if (spinnerArrayAdapter == null) {
@@ -199,9 +216,26 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
                         values);
                 spinner.setAdapter(spinnerArrayAdapter);
                 spinner.setVisibility(View.VISIBLE);
+                checkPoll.setVisibility(View.VISIBLE);
                 spinner.setSelection(0);
             }
-            sendButton.setText("Request Sensor Results");
+            if (sosService != null) {
+                if (sosService.isPollingServer()) {
+                    sendButton.setText("Periodically getting results...");
+                    sendButton.setEnabled(false);
+                    progressBarPolling.setVisibility(View.VISIBLE);
+                } else {
+                    sendButton.setText("Request Sensor Results");
+                    sendButton.setEnabled(true);
+                    progressBarPolling.setVisibility(View.INVISIBLE);
+                }
+            } else
+                sendButton.setEnabled(false);
+        }
+        if (sosService != null) {
+            systemChangingCheckPoll = true;
+            checkPoll.setChecked(sosService.isPollingServer());
+            systemChangingCheckPoll = false;
         }
     }
 
@@ -284,6 +318,8 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
             runOnUiThread(() -> {
                 updateVisibility();
             });
+            if (checkPoll.isChecked() && (sosService != null))
+                sosService.startPolling();
             if (operation instanceof OperationGetCapabilitiesResponse) {
                 ArrayList<SosSensor> opSensors = ((OperationGetCapabilitiesResponse) operation).getSensors();
                 if ((opSensors != null) && !opSensors.isEmpty()) {
@@ -321,8 +357,10 @@ public class PullExampleActivity extends AppCompatActivity implements SosMessage
                 runOnUiThread(() -> {
                     if (received == null)
                         log("GetResults failed to get any sensor information");
-                    else
+                    else {
+                        Toast.makeText(PullExampleActivity.this,received.getId()+" updated",Toast.LENGTH_SHORT).show();
                         log(received.toString());
+                    }
                 });
             }
             runOnUiThread(() -> {

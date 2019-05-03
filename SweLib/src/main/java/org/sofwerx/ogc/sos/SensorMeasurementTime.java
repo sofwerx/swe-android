@@ -42,7 +42,7 @@ public class SensorMeasurementTime extends SensorMeasurement {
                 e.printStackTrace();
             }
         } else
-            this.setValue(value);
+            super.setValue(value);
     }
 
 

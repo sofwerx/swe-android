@@ -45,9 +45,15 @@ public class SosIpcTransceiver extends BroadcastReceiver {
     public static final String ACTION_SQAN_BROADCAST = "org.sofwerx.sqan.pkt";
     private final static String SQAN_PACKET_BYTES = "bytes";
     private final static String SQAN_PACKET_CHANNEL = "channel";
+    final static long DEFAULT_OUTGOING_THROTTLE_RATE = 1000l * 5l;
+    final static long DEFAULT_INCOMING_THROTTLE_RATE = 1000l * 10l;
     private static boolean enableSqAN = true;
     private static String channel = SosService.DEFAULT_SWE_CHANNEL;
     private SosMessageListener listener;
+
+    //Since XML is expensive to marshall/unmarshall, include throttling to ignore messages that come in or go out too fast
+    private static long throttleRate = -1l;
+    private static long nextAvailableIntake = Long.MIN_VALUE;
 
     public SosIpcTransceiver(SosMessageListener listener) {
         this.listener = listener;
@@ -55,6 +61,25 @@ public class SosIpcTransceiver extends BroadcastReceiver {
 
     public static void setChannel(String channel) { SosIpcTransceiver.channel = channel; }
     public static void setEnableSqAN(boolean enable) { SosIpcTransceiver.enableSqAN = enable; }
+
+    /**
+     * Sets a throttle rate (i.e. a min amo8nt of time between messages in ms); all messages
+     * received in excess of the throttle rate will be dropped (done to prevent bogging
+     * down the processor in XML marshallig/unmarshalling operations).
+     * @param rate rate in ms (or -1l if no throttling is needed)
+     */
+    public static void setThrottleRate(long rate) {
+        if (throttleRate != rate) {
+            throttleRate = rate;
+            if (rate > 0l)
+                Log.d(TAG, "Setting throttle interval to " + Long.toString(rate) + "ms");
+            else {
+                Log.d(TAG, "Removing throttle");
+            }
+        }
+    }
+
+    public static void clearThrottle() { setThrottleRate(-1l); }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -98,22 +123,27 @@ public class SosIpcTransceiver extends BroadcastReceiver {
             Log.e(TAG, "Null operation received from SOS broadcast IPC");
             return;
         }
-        new Thread(() -> {
-            try {
-                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder docBuilder = builderFactory.newDocumentBuilder();
-                Document doc = docBuilder.parse(new InputSource(new ByteArrayInputStream(input.getBytes("utf-8"))));
-                if (doc != null) {
-                    AbstractSosOperation operation = AbstractSosOperation.newFromXML(doc);
-                    if (operation != null) {
-                        if (listener != null)
-                            listener.onSosOperationReceived(operation);
+        if ((throttleRate <= 0l) || (System.currentTimeMillis() > nextAvailableIntake)) {
+            if (throttleRate > 0l)
+                nextAvailableIntake = System.currentTimeMillis() + throttleRate;
+            new Thread(() -> {
+                try {
+                    DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+                    DocumentBuilder docBuilder = builderFactory.newDocumentBuilder();
+                    Document doc = docBuilder.parse(new InputSource(new ByteArrayInputStream(input.getBytes("utf-8"))));
+                    if (doc != null) {
+                        AbstractSosOperation operation = AbstractSosOperation.newFromXML(doc);
+                        if (operation != null) {
+                            if (listener != null)
+                                listener.onSosOperationReceived(operation);
+                        }
                     }
+                } catch (ParserConfigurationException | IOException | SAXException e) {
+                    Log.e(TAG, "SOS IPC broadcast was not XML: " + input);
                 }
-            } catch (ParserConfigurationException | IOException | SAXException e) {
-                Log.e(TAG,"SOS IPC broadcast was not XML: "+input);
-            }
-        }).start();
+            }).start();
+        } else
+            Log.d(TAG,"Dropping message from "+source+" due to flooding: "+input);
     }
 
     /**
@@ -122,25 +152,30 @@ public class SosIpcTransceiver extends BroadcastReceiver {
      * @param operation
      */
     public void broadcast(final Context context, final AbstractSosOperation operation) throws SosException {
-        if (operation != null) {
-            if (!operation.isValid()) {
-                throw new SosException(operation.getClass().getSimpleName()+" does not have all required information");
+        if ((throttleRate <= 0l) || (System.currentTimeMillis() > nextAvailableIntake)) {
+            if (throttleRate > 0l)
+                nextAvailableIntake = System.currentTimeMillis() + throttleRate;
+            if (operation != null) {
+                if (!operation.isValid()) {
+                    throw new SosException(operation.getClass().getSimpleName() + " does not have all required information");
+                }
+                new Thread(() -> {
+                    Document doc = null;
+                    try {
+                        doc = operation.toXML();
+                    } catch (ParserConfigurationException e) {
+                        //throw new SosException("Unable to create document: " + e.getMessage());
+                    }
+                    try {
+                        if (doc != null)
+                            broadcast(context, toString(doc));
+                    } catch (Exception ex) {
+                        //throw new SosException("Unable to convert XML document to string: " + ex.getMessage());
+                    }
+                }).start();
             }
-            new Thread(() -> {
-                Document doc = null;
-                try {
-                    doc = operation.toXML();
-                } catch (ParserConfigurationException e) {
-                    //throw new SosException("Unable to create document: " + e.getMessage());
-                }
-                try {
-                    if (doc != null)
-                        broadcast(context, toString(doc));
-                } catch (Exception ex) {
-                    //throw new SosException("Unable to convert XML document to string: " + ex.getMessage());
-                }
-            }).start();
-        }
+        } else
+            Log.d(TAG,operation.getClass().getSimpleName()+" operation received but ignored since the current throttle rate of "+Long.toString(throttleRate)+"ms is being exceeded");
     }
 
     public final static String toString(Document doc) throws TransformerException {

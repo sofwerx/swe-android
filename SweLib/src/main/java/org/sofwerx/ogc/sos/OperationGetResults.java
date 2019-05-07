@@ -39,7 +39,9 @@ public class OperationGetResults extends AbstractSosOperation {
         pairs.add(new Pair("request","GetResult"));
         pairs.add(new Pair("offering",sensor.getAssignedOffering()));
         pairs.add(new Pair("observedProperty",sensor.getFirstObservableProperty()));
+        //TODO pairs.add(new Pair("temporalFilter","phenomenonTime,now")); //this sisnt working for some reason
         pairs.add(new Pair("responseFormat","application/json"));
+
         return pairs;
     }
 

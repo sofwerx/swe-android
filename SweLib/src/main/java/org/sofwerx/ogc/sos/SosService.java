@@ -40,6 +40,9 @@ public class SosService implements SosMessageListener {
     private boolean sensorMode = true;
     private AtomicBoolean shouldPollServer = new AtomicBoolean(false);
     private long pollInterval = 1000l * 15l; //default server polling interval
+    private boolean autoThrottle = false;
+    private long outgoingThrottleRate = SosIpcTransceiver.DEFAULT_OUTGOING_THROTTLE_RATE;
+    private long incomingThrottleRate = SosIpcTransceiver.DEFAULT_INCOMING_THROTTLE_RATE;
 
     /**
      * Creates a new SosService
@@ -274,6 +277,8 @@ public class SosService implements SosMessageListener {
             handler.post(() -> {
                 if (sosSensor.getAssignedProcedure() == null) {
                     if (sosSensor.isReadyToRegisterSensor()) {
+                        if (autoThrottle)
+                            SosIpcTransceiver.clearThrottle();
                         Log.d(SosIpcTransceiver.TAG,"Sensor has all required info to register; contacting server...");
                         OperationInsertSensor operation = new OperationInsertSensor(sosSensor);
                         broadcast(operation);
@@ -281,6 +286,8 @@ public class SosService implements SosMessageListener {
                         Log.w(SosIpcTransceiver.TAG, "sosSensor does not yet have enough information to register with the SOS server");
                 } else if (sosSensor.getAssignedTemplate() == null) {
                     if (sosSensor.isReadyToRegisterResultTemplate()) {
+                        if (autoThrottle)
+                            SosIpcTransceiver.clearThrottle();
                         OperationInsertResultTemplate operation = new OperationInsertResultTemplate(sosSensor);
                         broadcast(operation);
                     } else
@@ -339,6 +346,8 @@ public class SosService implements SosMessageListener {
                     Log.i(SosIpcTransceiver.TAG,"InsertSensorResponse received, but it was for sensor "+response.getAssignedProcedure());
             }
         } else if (operation instanceof OperationInsertResultTemplateResponse) {
+            if (autoThrottle)
+                SosIpcTransceiver.setThrottleRate(outgoingThrottleRate);
             if (sosSensor != null) {
                 OperationInsertResultTemplateResponse response = (OperationInsertResultTemplateResponse) operation;
                 if ((response.getAcceptedTemplate() != null) && (sosSensor.getAssignedProcedure() != null)
@@ -349,8 +358,14 @@ public class SosService implements SosMessageListener {
                     if (listener != null)
                         listener.onSosConfigurationSuccess();
                 } else
-                    Log.i(SosIpcTransceiver.TAG,"InsertResultTemplateResponse received, but it was for template "+response.getAcceptedTemplate());
+                    Log.i(SosIpcTransceiver.TAG, "InsertResultTemplateResponse received, but it was for template " + response.getAcceptedTemplate());
             }
+        } else if (operation instanceof OperationInsertResult) {
+            if (autoThrottle)
+                SosIpcTransceiver.setThrottleRate(incomingThrottleRate);
+        } else if (operation instanceof OperationInsertResultResponse) {
+            if (autoThrottle)
+                SosIpcTransceiver.setThrottleRate(outgoingThrottleRate);
         }
         if (listener != null)
             listener.onSosOperationReceived(operation);
@@ -402,4 +417,48 @@ public class SosService implements SosMessageListener {
      */
     public void setSensorMode(boolean sensorMode) { this.sensorMode = sensorMode; }
     public void setSensorMode() { setSensorMode(true); }
+
+    /**
+     * Is the service set to automatically throttle incoming messages to offset
+     * cost on flooding XML unmarshalling.
+     * @return true == will automatically throttle
+     */
+    public boolean isAutoThrottle() { return autoThrottle; }
+
+    /**
+     * Sets the service to automatically throttle incoming messages (usually done as
+     * a way to prevent flooding the processor with a bunch of costly XML unmarshalling)
+     * @param autoThrottle true == the service will automatically throttle
+     */
+    public void setAutoThrottle(boolean autoThrottle) { this.autoThrottle = autoThrottle; }
+
+    /**
+     * Gets the set throttle rate on outgoing messages
+     * @return interval between messages in ms
+     */
+    public long getOutgoingThrottleRate() { return outgoingThrottleRate; }
+
+    /**
+     * Sets the set throttle rate on outgoing messages
+     * @param outgoingThrottleRate interval between messages in ms
+     */
+    public void setOutgoingThrottleRate(long outgoingThrottleRate) {
+        if (outgoingThrottleRate > 0l)
+            this.outgoingThrottleRate = outgoingThrottleRate;
+    }
+
+    /**
+     * Gets the set throttle rate on incoming messages
+     * @return interval between messages in ms
+     */
+    public long getIncomingThrottleRate() { return incomingThrottleRate; }
+
+    /**
+     * Sets the set throttle rate on incoming messages
+     * @param incomingThrottleRate interval between messages in ms
+     */
+    public void setIncomingThrottleRate(long incomingThrottleRate) {
+        if (incomingThrottleRate > 0l)
+            this.incomingThrottleRate = incomingThrottleRate;
+    }
 }

@@ -44,7 +44,8 @@ public class OperationGetCapabilities extends AbstractSosOperation {
         getCap.setAttribute("xmlns:ows","http://www.opengis.net/ows/1.1");
         getCap.setAttribute("xmlns:sos","http://www.opengis.net/sos/2.0");
         getCap.setAttribute("service","SOS");
-        getCap.setAttribute("xsi:schemaLocation","http://www.opengis.net/sos/2.0 http://schemas.opengis.net/sos/2.0/sosGetCapabilities.xsd");
+        //xsi prefix dropped due to problems caused within IPC variant of comms
+        //getCap.setAttribute("xsi:schemaLocation","http://www.opengis.net/sos/2.0 http://schemas.opengis.net/sos/2.0/sosGetCapabilities.xsd");
         doc.appendChild(getCap);
         Element elementAcceptVersions = doc.createElement(TAG_ACCEPT_VERSIONS);
         Element elementVersion = doc.createElement(TAG_VERSION);
